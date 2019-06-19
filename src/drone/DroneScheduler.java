@@ -73,58 +73,6 @@ public class DroneScheduler {
 
 	}
 
-	private Thread processQueue(CountDownLatch latch) {
-		QueueProcessor qProcessor = new QueueProcessor(latch);
-		Thread th = new Thread(qProcessor);
-		th.start();
-
-		return th;
-
-	}
-
-	/**
-	 * Add order to priority queue if time received for order >= current time
-	 */
-	private void addOrdersToProcessingQueue(final BlockingQueue<Order> orderQueue, CountDownLatch latch) {
-
-		Thread addOrdersThread = new Thread(() -> {
-			while (!orderQueue.isEmpty() || !lastEntryFound.get()) {
-				Order order = orderQueue.peek();
-				System.out
-						.println("order null? " + (order == null) + "order= " + order.getOrderId());
-				try {
-				while (compareCurrTimeInString(order.getTimeReceived())) {
-					try {
-						TimeUnit.SECONDS.sleep(1);
-							System.out.println("Waiting for start time");
-					} catch (InterruptedException e) {
-						// timeunit interruption, can be ignored
-					}
-				}
-				} catch (Exception e) {
-					System.out.println("Error comparing time for orders " + e);
-				}
-				System.out.println("Adding order " + order.getOrderId() + " to pq");
-				q.add(orderQueue.poll());
-			}
-		});
-		addOrdersThread.setName("AddOrdersToPQ");
-		addOrdersThread.start();
-	}
-
-	/**
-	 * If current time > parameter time
-	 * 
-	 * @throws ParseException
-	 */
-	private boolean compareCurrTimeInString(String time) throws ParseException {
-		SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-		Date date1 = format.parse(time);
-		long difference = System.currentTimeMillis() - date1.getTime();
-
-		return difference > 0 ? true : false;
-	}
-
 	/**
 	 * Reads input file till last entry is reached, adds orders to blockingqueue
 	 */
@@ -187,13 +135,64 @@ public class DroneScheduler {
 			return false;
 		if(lineSplit[0].isEmpty() || lineSplit[2].isEmpty())
 			return false;
-		System.out.println(
-				"Order time received= " + lineSplit[2] + " distance " + distanceFromRoot + " id " + lineSplit[0]);
 		Order order=new Order(lineSplit[0],lineSplit[2],distanceFromRoot,getRoundTripTimeForDistanceinMillis(distanceFromRoot),getRoundTripTimeString(distanceFromRoot));
 
 		orderQueue.add(order);
 
 		return true;
+	}
+
+	/**
+	 * Add order to priority queue if time received for order >= current time
+	 */
+	private void addOrdersToProcessingQueue(final BlockingQueue<Order> orderQueue, CountDownLatch latch) {
+
+		Thread addOrdersThread = new Thread(() -> {
+			while (!orderQueue.isEmpty() || !lastEntryFound.get()) {
+				Order order = orderQueue.peek();
+				System.out
+						.println("order null? " + (order == null) + "order= " + order.getOrderId());
+				try {
+				while (compareCurrTimeInString(order.getTimeReceived())) {
+					try {
+						TimeUnit.SECONDS.sleep(1);
+							System.out.println("Waiting for start time");
+					} catch (InterruptedException e) {
+						// timeunit interruption, can be ignored
+					}
+				}
+				} catch (Exception e) {
+					System.out.println("Error comparing time for orders " + e);
+				}
+				System.out.println("Adding order " + order.getOrderId() + " to pq");
+				q.add(orderQueue.poll());
+			}
+		});
+		addOrdersThread.setName("AddOrdersToPQ");
+		addOrdersThread.start();
+	}
+
+	/**
+	 * If current time > parameter time
+	 * 
+	 * @throws ParseException
+	 */
+	private boolean compareCurrTimeInString(String time) throws ParseException {
+		SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
+		Date date1 = format.parse(time);
+		long difference = System.currentTimeMillis() - date1.getTime();
+
+		return difference > 0 ? true : false;
+	}
+
+
+	private Thread processQueue(CountDownLatch latch) {
+		QueueProcessor qProcessor = new QueueProcessor(latch);
+		Thread th = new Thread(qProcessor);
+		th.start();
+
+		return th;
+
 	}
 
 	public class QueueProcessor implements Runnable {
@@ -284,7 +283,6 @@ public class DroneScheduler {
 	}
 
 	public void writeNPSToFile(String outputFilePath2) throws IOException {
-		// TODO Auto-generated method stub
 		FileWriter fw = null;
 		PrintWriter pw = null;
 		try {
